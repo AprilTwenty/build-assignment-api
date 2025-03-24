@@ -57,13 +57,54 @@ app.post("/assignments", async (req, res) => {
       //console.log(newAssignment);
       //-------------------------------------------------
 
-      if (error.column != "") {
-        return res.status(400).json({ message: "Server could not create assignment because there are missing data from client at " + error.column});
-      }
-      return res.status(500).json({ "message": "Server could not create assignment because database connection" });
+    if (error.column != "") {
+      return res.status(400).json({ message: "Server could not create assignment because there are missing data from client at " + error.column});
+    }
+
+    return res.status(500).json({ "message": "Server could not create assignment because database connection" });
   }
 
 })
+
+app.get("/assignments", async (req, res) => {
+  //1 access body and req
+
+  //2 sql statments
+  try {
+  const result = await connectionPool.query(`SELECT * FROM assignments`);
+  //3 res section
+  return res.status(200).json({
+    "data": result.rows
+  });
+  } catch (error) {
+    return res.status(500).json({
+      "message": "Server could not read assignment because database connection"
+    });
+  }
+})
+
+app.get("/assignments/:assignmentId", async (req, res) => {
+  //1 access body and req
+  const assignmentIdFromClient = req.params.assignmentId;
+  //2 sql statments
+  try {
+    const result = await connectionPool.query(`SELECT * FROM assignments WHERE assignment_id = $1`, [assignmentIdFromClient]);
+  //3 res sections
+    if (result.rowCount == 0) {
+      return res.status(404).json({
+        "message": "Server could not find a requested assignment"
+      });
+    }
+    return res.status(200).json({
+      "data": result.rows[0]
+    });
+  } catch (error) {
+    return res.status(500).json({
+      "message": "Server could not read assignment because database connection"
+    })
+  }
+})
+
 
 app.listen(port, () => {
   console.log(`Server is running at ${port}`);
