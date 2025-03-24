@@ -6,26 +6,29 @@ const port = 4000;
 
 app.use(express.json());
 
-app.get("/users", (req, res) => {
+/* not req in api doc
+app.get("/users", async (req, res) => {
   try {
-    return res.status(200).json({message: "Server API is working 🚀"});
+    const result = await connectionPool.query(`SELECT * FROM users`);
+    return res.status(200).json({"message": "Server API is working 🚀", "data": result.rows});
   } catch(error) {
     return res.status(500).json({message: "cannot connect to sever"});
   }
   
 });
+*/
 
 app.post("/assignments", async (req, res) => {
   const newAssignment = {
     ...req.body,
-    user_id: "1",
+    user_id: 1,
     created_at: new Date(),
     updated_at: new Date(),
     published_at: new Date()
   };
 
   try {
-    await connectionPool.query(
+    const result = await connectionPool.query(
       `insert into assignments (title, content, category, user_id, created_at, updated_at, published_at)
        values ($1, $2, $3, $4, $5, $6, $7)`, 
       [
@@ -37,12 +40,27 @@ app.post("/assignments", async (req, res) => {
         newAssignment.updated_at,
         newAssignment.published_at
       ]);
-      console.log(newAssignment);
+
+    if (result.rowCount < 1) {
+      return res.status(202).json({ message: "Unable to create new data. The system did not find any related information or encountered an error in the process. Please check again." });
+    }
+      // ------------------------ test section-----------
+      //console.log(newAssignment);
+      //console.log(result);
+      //-------------------------------------------------
+
     return res.status(201).json({ message: "Created assignment sucessfully" });
   } catch(error) {
-      console.log(error);
-      console.log(newAssignment);
-      return res.status(400).json({ message: "Server could not create assignment because there are missing data from client" });
+
+      // ------------------------ test section-----------
+      //console.log(error.column);
+      //console.log(newAssignment);
+      //-------------------------------------------------
+
+      if (error.column != "") {
+        return res.status(400).json({ message: "Server could not create assignment because there are missing data from client at " + error.column});
+      }
+      return res.status(500).json({ "message": "Server could not create assignment because database connection" });
   }
 
 })
@@ -50,10 +68,3 @@ app.post("/assignments", async (req, res) => {
 app.listen(port, () => {
   console.log(`Server is running at ${port}`);
 });
-
-/* ทดสอบ------
-const data = {
-  name: "test",
-  age: 16
-};
-*/
